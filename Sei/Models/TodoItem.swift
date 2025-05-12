@@ -1,16 +1,9 @@
 import Foundation
 
 struct TodoItem: Identifiable, Codable {
-    var id = UUID()
+    let id: String
+    let user_id: String
     var title: String
-    var isCompleted: Bool
-    var createdAt: Date
-    var dueDate: Date? // Optional due date
-    
-    init(title: String, isCompleted: Bool = false, dueDate: Date? = nil) {
-        self.title = title
-        self.isCompleted = isCompleted
-        self.createdAt = Date()
-        self.dueDate = dueDate
-    }
+    var is_completed: Bool
+    let created_at: Date
 } 

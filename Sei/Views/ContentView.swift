@@ -73,11 +73,17 @@ struct ContentView: View {
                     }
                 }
                 .listStyle(.plain)
+                .refreshable {
+                    await viewModel.fetchTasks()
+                }
             }
             .onAppear {
                 Task {
                     await getUserEmail()
                 }
+            }
+            .task {
+                await viewModel.fetchTasks()
             }
             
             // Sidebar
@@ -222,12 +228,12 @@ struct TodoItemRow: View {
     var body: some View {
         HStack {
             Button(action: { viewModel.toggleItem(item) }) {
-                Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
-                    .foregroundColor(item.isCompleted ? .green : .gray)
+                Image(systemName: item.is_completed ? "checkmark.circle.fill" : "circle")
+                    .foregroundColor(item.is_completed ? .green : .gray)
             }
             Text(item.title)
-                .strikethrough(item.isCompleted)
-                .foregroundColor(item.isCompleted ? .gray : .primary)
+                .strikethrough(item.is_completed)
+                .foregroundColor(item.is_completed ? .gray : .primary)
             Spacer()
         }
         .swipeActions {

@@ -1,21 +1,79 @@
 import Foundation
 import SwiftUI
+import Supabase
+
+struct NewTask: Encodable {
+    let user_id: UUID
+    let title: String
+    let is_completed: Bool
+}
 
 class TodoViewModel: ObservableObject {
     @Published var items: [TodoItem] = []
     
-    func addItem(title: String) {
-        let newItem = TodoItem(title: title)
-        items.append(newItem)
-    }
-    
-    func toggleItem(_ item: TodoItem) {
-        if let index = items.firstIndex(where: { $0.id == item.id }) {
-            items[index].isCompleted.toggle()
+    // Fetch tasks for the current user
+    func fetchTasks() async {
+        do {
+            let tasks: [TodoItem] = try await SupabaseManager.shared.client.database
+                .from("tasks")
+                .select()
+                .order("created_at", ascending: false)
+                .execute()
+                .value
+            DispatchQueue.main.async {
+                self.items = tasks
+            }
+        } catch {
+            print("Error fetching tasks: \(error)")
         }
     }
     
+    // Add a new task
+    func addItem(title: String) {
+        Task {
+            guard let userId = try? await SupabaseManager.shared.client.auth.session.user.id else { return }
+            let newTask = NewTask(user_id: userId, title: title, is_completed: false)
+            do {
+                _ = try await SupabaseManager.shared.client.database
+                    .from("tasks")
+                    .insert(newTask)
+                    .execute()
+                await fetchTasks()
+            } catch {
+                print("Error adding task: \(error)")
+            }
+        }
+    }
+    
+    // Toggle completion
+    func toggleItem(_ item: TodoItem) {
+        Task {
+            do {
+                _ = try await SupabaseManager.shared.client.database
+                    .from("tasks")
+                    .update(["is_completed": !item.is_completed])
+                    .eq("id", value: item.id)
+                    .execute()
+                await fetchTasks()
+            } catch {
+                print("Error toggling task: \(error)")
+            }
+        }
+    }
+    
+    // Delete a task
     func deleteItem(_ item: TodoItem) {
-        items.removeAll { $0.id == item.id }
+        Task {
+            do {
+                _ = try await SupabaseManager.shared.client.database
+                    .from("tasks")
+                    .delete()
+                    .eq("id", value: item.id)
+                    .execute()
+                await fetchTasks()
+            } catch {
+                print("Error deleting task: \(error)")
+            }
+        }
     }
 } 
