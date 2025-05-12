@@ -4,11 +4,48 @@ struct ContentView: View {
     @StateObject private var viewModel = TodoViewModel()
     @State private var newItemTitle = ""
     @State private var isSidebarVisible = false
+    @EnvironmentObject var session: SessionManager
+    @State private var userEmail: String? = nil
     
     var body: some View {
         ZStack {
             // Main Content
-            NavigationView {
+            VStack(spacing: 0) {
+                // Custom navigation bar
+                HStack {
+                    Button(action: {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            isSidebarVisible.toggle()
+                        }
+                    }) {
+                        Image(systemName: "line.3.horizontal")
+                            .font(.title2)
+                            .foregroundColor(.blue)
+                    }
+                    .padding(.leading)
+                    
+                    Spacer()
+                    
+                    Text("Sei")
+                        .font(.headline)
+                        .fontWeight(.bold)
+                    
+                    Spacer()
+                    
+                    // Optional right button if needed
+                    Button(action: {}) {
+                        Image(systemName: "gear")
+                            .font(.title2)
+                            .foregroundColor(.blue)
+                    }
+                    .padding(.trailing)
+                    .opacity(0) // Hide it for now, can be used later
+                }
+                .padding(.vertical, 10)
+                .background(Color(.systemBackground))
+                .shadow(color: Color.black.opacity(0.1), radius: 1, x: 0, y: 1)
+                
+                // List content
                 List {
                     Section(header: Text("Tasks")) {
                         // Existing tasks first
@@ -36,17 +73,10 @@ struct ContentView: View {
                     }
                 }
                 .listStyle(.plain)
-                .navigationTitle("Sei")
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Button(action: {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                                isSidebarVisible.toggle()
-                            }
-                        }) {
-                            Image(systemName: "line.3.horizontal")
-                        }
-                    }
+            }
+            .onAppear {
+                Task {
+                    await getUserEmail()
                 }
             }
             
@@ -61,6 +91,19 @@ struct ContentView: View {
                     }
                 HStack(spacing: 0) {
                     VStack(alignment: .leading, spacing: 0) {
+                        // User info at the top
+                        if let email = userEmail {
+                            HStack {
+                                Image(systemName: "person.circle.fill")
+                                    .font(.title2)
+                                    .foregroundColor(.blue)
+                                Text(email)
+                                    .font(.subheadline)
+                                    .foregroundColor(.primary)
+                            }
+                            .padding(.horizontal)
+                            .padding(.top, 24)
+                        }
                         HStack {
                             Button(action: {
                                 withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
@@ -79,7 +122,7 @@ struct ContentView: View {
                             }
                         }
                         .padding(.horizontal)
-                        .padding(.top, 70) // status bar + nav bar height for iPhone
+                        .padding(.top, 24)
                         .padding(.bottom, 16)
                         Divider()
                         Text("Categories")
@@ -115,6 +158,21 @@ struct ContentView: View {
                         .padding(.horizontal)
                         .padding(.top, 8)
                         Spacer()
+                        // Log Out button at the bottom
+                        Button(action: {
+                            Task {
+                                await session.signOut()
+                            }
+                        }) {
+                            HStack {
+                                Image(systemName: "arrow.backward.circle.fill")
+                                    .foregroundColor(.red)
+                                Text("Log Out")
+                                    .foregroundColor(.red)
+                            }
+                        }
+                        .padding(.horizontal)
+                        .padding(.bottom, 24)
                     }
                     .frame(width: 300)
                     .background(Color.white)
@@ -124,6 +182,18 @@ struct ContentView: View {
                 }
                 .transition(.move(edge: .leading))
             }
+        }
+    }
+    
+    private func getUserEmail() async {
+        do {
+            // Access the session directly without if let
+            let authSession = try await SupabaseManager.shared.client.auth.session
+            DispatchQueue.main.async {
+                self.userEmail = authSession.user.email
+            }
+        } catch {
+            print("Error getting user email: \(error)")
         }
     }
     
@@ -172,4 +242,5 @@ struct TodoItemRow: View {
 
 #Preview {
     ContentView()
+        .environmentObject(SessionManager())
 } 
