@@ -10,6 +10,7 @@ import SwiftUI
 @main
 struct SeiApp: App {
     @StateObject private var session = SessionManager()
+    @StateObject private var todoViewModel = TodoViewModel()
     
     var body: some Scene {
         WindowGroup {
@@ -17,6 +18,7 @@ struct SeiApp: App {
                 if session.isLoggedIn {
                     ContentView()
                         .environmentObject(session)
+                        .environmentObject(todoViewModel)
                         .onAppear {
                             print("Showing ContentView - User is logged in")
                         }
